@@ -1,0 +1,2 @@
+fastq_info_url : "https://www.ebi.ac.uk/arrayexpress/files/E-GEOD-60424/E-GEOD-60424.sdrf.txt"
+index_tar_url : "https://github.com/pachterlab/kallisto-transcriptome-indices/releases/download/ensembl-96/homo_sapiens.tar.gz"
