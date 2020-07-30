@@ -10,12 +10,13 @@ def all_abundance_files(wildcards):
 def get_fastq_files_for_ID(wildcards):
     fastq_dict = get_fastq_dict()
     sample_ID = wildcards.SAMPLE_ID
-    return [f"data/fastq/{sample_ID}/{full_id}.fastq.gz"
+    files = [f"data/fastq/{sample_ID}/{full_id}.fastq.gz"
             for full_id in fastq_dict[sample_ID].keys()]
+    return files
 
 def get_fastq_url_from_fastq_id(wildcards):
     fastq_dict = get_fastq_dict()
-    return {"url": fastq_dict[wildcards.SAMPLE_ID][wildcards.FASTQ_ID]}
+    return fastq_dict[wildcards.SAMPLE_ID][wildcards.FASTQ_ID]
 
 def get_fastq_dict():
     fastq_dict_file = checkpoints.construct_fastq_dict.get().output[0]
@@ -75,7 +76,7 @@ rule fetch_fastq:
     group:
         "kallisto_sample"
     params:
-        get_fastq_url_from_fastq_id
+        url=get_fastq_url_from_fastq_id
     log:
         "logs/data/fastq/{SAMPLE_ID}/{FASTQ_ID}.log"
     output:
@@ -87,17 +88,19 @@ rule run_kallisto:
     group:
         "kallisto_sample"
     input:
-        get_fastq_files_for_ID
+        "fastq_dict.json",
+        fastq=get_fastq_files_for_ID
     log:
         "logs/data/kallisto/{SAMPLE_ID}.log"
     output:
         "data/kallisto/{SAMPLE_ID}/abundance.tsv"
     shell:
-        "kallisto quant --index={extract_index.output} --output-dir=$(dirname {output}) {input} 2>&1 | tee {log}"
+        "kallisto quant --index={rules.extract_index.output} --output-dir=$(dirname {output}) {input.fastq} 2>&1 | tee {log}"
 
 rule generate_count_matrix:
     input:
-        all_abundance_files
+        "fastq_dict.json",
+        abundance=all_abundance_files
     output:
         df="data/tpm.tsv"
     run:
@@ -111,7 +114,7 @@ rule generate_count_matrix:
         transcript_info = pd.read_csv("mus_musculus/transcripts_to_genes.txt", sep="\t", header=None, index_col=0)
         transcript_info.columns = ['GENE_ID', 'GENE_SYMBOL']
 
-        for file in input:
+        for file in input.abundance:
             print(file)
             df = pd.read_csv(file, sep="\t")
             df['gene'] = df['target_id'].map(transcript_info['GENE_ID'])
