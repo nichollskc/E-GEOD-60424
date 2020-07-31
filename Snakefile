@@ -25,16 +25,6 @@ def get_fastq_dict():
         fastq_dict = json.load(f)
     return fastq_dict
 
-rule all:
-    input:
-        "data/tpm.tsv"
-
-rule fetch_sample_info:
-    output:
-        "fastq_info.txt"
-    shell:
-        "wget -O {output} --no-verbose {config[fastq_info_url]}"
-
 rule construct_fastq_dict:
     input:
         "fastq_info.txt"
@@ -59,6 +49,12 @@ rule construct_fastq_dict:
         with open(output[0], 'w') as f:
             json.dump(fastq_dict, f, indent=2)
 
+rule fetch_sample_info:
+    output:
+        "fastq_info.txt"
+    shell:
+        "wget -O {output} --no-verbose {config[fastq_info_url]}"
+
 rule fetch_index:
     output:
         temp("transcriptome.idx.tar.gz")
@@ -69,9 +65,9 @@ rule extract_index:
     input:
         "transcriptome.idx.tar.gz"
     output:
-        "transcriptome.idx"
+        "homo_sapiens/transcriptome.idx"
     shell:
-        "tar -xvzf {input} && mv homo_sapiens/{output} {output}"
+        "tar -xvzf {input}"
 
 rule fetch_fastq:
     input:
@@ -92,6 +88,7 @@ rule run_kallisto:
         "kallisto_sample"
     input:
         "fastq_dict.json",
+        "homo_sapiens/transcriptome.idx",
         fastq=get_fastq_files_for_ID
     log:
         "logs/data/kallisto/{SAMPLE_ID}.log"
@@ -103,6 +100,7 @@ rule run_kallisto:
 rule generate_count_matrix:
     input:
         "fastq_dict.json",
+        tx_to_gene="homo_sapiens/transcripts_to_genes.txt"
         abundance=all_abundance_files
     output:
         df="data/tpm.tsv"
@@ -114,7 +112,7 @@ rule generate_count_matrix:
         print(input)
         print(output.df)
 
-        transcript_info = pd.read_csv("mus_musculus/transcripts_to_genes.txt", sep="\t", header=None, index_col=0)
+        transcript_info = pd.read_csv(input['tx_to_gene'], sep="\t", header=None, index_col=0)
         transcript_info.columns = ['GENE_ID', 'GENE_SYMBOL']
 
         for file in input.abundance:
