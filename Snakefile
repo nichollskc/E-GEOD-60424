@@ -1,5 +1,7 @@
 configfile: "config.yml"
 
+localrules: generate_count_matrix
+
 import json
 
 def all_abundance_files(wildcards):
@@ -66,6 +68,7 @@ rule extract_index:
         "transcriptome.idx.tar.gz"
     output:
         "homo_sapiens/transcriptome.idx"
+        "homo_sapiens/transcripts_to_genes.txt",
     shell:
         "tar -xvzf {input}"
 
@@ -88,19 +91,19 @@ rule run_kallisto:
         "kallisto_sample"
     input:
         "fastq_dict.json",
-        "homo_sapiens/transcriptome.idx",
+        index="homo_sapiens/transcriptome.idx",
         fastq=get_fastq_files_for_ID
     log:
         "logs/data/kallisto/{SAMPLE_ID}.log"
     output:
         "data/kallisto/{SAMPLE_ID}/abundance.tsv"
     shell:
-        "kallisto quant --index={rules.extract_index.output} --output-dir=$(dirname {output}) {input.fastq} 2>&1 | tee {log}"
+        "kallisto quant --index={input.index} --output-dir=$(dirname {output}) {input.fastq} 2>&1 | tee {log}"
 
 rule generate_count_matrix:
     input:
         "fastq_dict.json",
-        tx_to_gene="homo_sapiens/transcripts_to_genes.txt"
+        tx_to_gene="homo_sapiens/transcripts_to_genes.txt",
         abundance=all_abundance_files
     output:
         df="data/tpm.tsv"
