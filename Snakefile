@@ -19,7 +19,8 @@ def get_fastq_url_from_fastq_id(wildcards):
     return fastq_dict[wildcards.SAMPLE_ID][wildcards.FASTQ_ID]
 
 def get_fastq_dict():
-    fastq_dict_file = checkpoints.construct_fastq_dict.get().output[0]
+    # Ideally this wouldn't be hard-coded, but this way is easier..
+    fastq_dict_file = "fastq_dict.json"
     with open(fastq_dict_file, 'r') as f:
         fastq_dict = json.load(f)
     return fastq_dict
@@ -34,7 +35,7 @@ rule fetch_sample_info:
     shell:
         "wget -O {output} --no-verbose {config[fastq_info_url]}"
 
-checkpoint construct_fastq_dict:
+rule construct_fastq_dict:
     input:
         "fastq_info.txt"
     output:
@@ -73,6 +74,8 @@ rule extract_index:
         "tar -xvzf {input} && mv homo_sapiens/{output} {output}"
 
 rule fetch_fastq:
+    input:
+        "fastq_dict.json"
     group:
         "kallisto_sample"
     params:
