@@ -1,8 +1,10 @@
 library(dplyr)
 
 # Read in counts, leaving sample name column as part of the df
-counts <- read.csv(snakemake@input[['counts']], sep='\t')
+counts <- read.csv(snakemake@input[['counts']], sep='\t', row.names=NULL)
 sample_info <- read.csv(snakemake@input[['sample_info']], sep='\t')
+print(colnames(counts)[1:10])
+sample_name_col <- colnames(counts)[1]
 
 # Sort the samples by cell type and then individual
 # (The samples are already sorted like this I think, but best to be safe)
@@ -14,9 +16,8 @@ sorted_samples <- sample_info %>%
 # Pick out the samples in the required order
 sorted_counts <- sorted_samples %>%
     select(Comment..ENA_SAMPLE.) %>%
-    left_join(sorted_sample_names,
-              counts,
-              by=c('Comment..ENA_SAMPLE.' = 'X'))
+    left_join(counts,
+              by=c('Comment..ENA_SAMPLE.' = sample_name_col))
 
 # Write out sorted sample info
 write.table(sorted_samples, file = snakemake@output[["sample_info"]], row.names = FALSE, col.names = TRUE, sep="\t")

@@ -35,33 +35,41 @@ def get_fastq_dict():
 
 rule construct_fastq_dict:
     input:
-        "data/raw/sample_info.txt"
+        "fastq_info.txt"
     output:
         "fastq_dict.json"
     run:
         import json
         import pandas as pd
 
-        sample_info = pd.read_csv(input[0], sep="\t")
+        fastq_info = pd.read_csv(input[0], sep="\t")
         sample_col = 'Comment [ENA_SAMPLE]'
         url_col = 'Comment [FASTQ_URI]'
         id_col = 'FASTQ_ID'
-        sample_info[id_col] = sample_info[url_col].str.extract(r'ftp://.*/(\w+)\.fastq\.gz')
+        fastq_info[id_col] = fastq_info[url_col].str.extract(r'ftp://.*/(\w+)\.fastq\.gz')
 
         # Generate a dictionary with each key one of the samples,
         # and the value a dictionary from fastq_id to fastq_url for each
         # fastq file associated with the sample
-        grouped = sample_info.groupby(sample_col)[id_col, url_col]
+        grouped = fastq_info.groupby(sample_col)[id_col, url_col]
         fastq_dict = grouped.apply(lambda df : dict(zip(df[id_col], df[url_col]))).to_dict()
 
         with open(output[0], 'w') as f:
             json.dump(fastq_dict, f, indent=2)
 
-rule fetch_sample_info:
+rule fetch_fastq_info:
     output:
-        "data/raw/sample_info.txt"
+        "fastq_info.txt"
     shell:
-        "wget -O {output} --no-verbose {config[sample_info_url]}"
+        "wget -O {output} --no-verbose {config[fastq_info]}"
+
+rule process_sample_info:
+    input:
+        fastq_info="fastq_info.txt"
+    output:
+        sample_info="data/raw/sample_info.txt"
+    script:
+        "process_sample_info.R"
 
 rule fetch_index:
     output:
