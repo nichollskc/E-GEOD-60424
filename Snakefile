@@ -35,7 +35,7 @@ def get_fastq_dict():
 
 rule construct_fastq_dict:
     input:
-        "sample_info.txt"
+        "data/raw/sample_info.txt"
     output:
         "fastq_dict.json"
     run:
@@ -59,7 +59,7 @@ rule construct_fastq_dict:
 
 rule fetch_sample_info:
     output:
-        "sample_info.txt"
+        "data/raw/sample_info.txt"
     shell:
         "wget -O {output} --no-verbose {config[sample_info_url]}"
 
@@ -139,20 +139,19 @@ rule generate_count_matrix:
 rule generate_deseq_normalised_matrix:
     input:
         "fastq_dict.json",
-        sample_info="sample_info.txt",
+        sample_info="data/raw/sample_info.txt",
         tx2gene="homo_sapiens/transcripts_to_genes.txt",
         h5=all_h5_files
     output:
-        normalised="data/deseq/raw/Y.txt",
-        sample_info="data/deseq/raw/sample_info.txt",
-        gene_names="data/deseq/raw/gene_names.txt"
+        normalised="data/deseq/raw/tpm.tsv",
+        sample_info="data/deseq/raw/sample_info.txt"
     script:
         "DESeq_processing.R"
 
 rule construct_tensor_dataset:
     input:
         counts="data/{folder}/tpm.tsv",
-        sample_info="sample_info.txt"
+        sample_info="data/raw/sample_info.txt"
     output:
         Y="data/tensor/{folder}/Y.txt",
         N="data/tensor/{folder}/N.txt",
@@ -163,11 +162,11 @@ rule construct_tensor_dataset:
 
 rule extract_gene_names:
     input:
-        raw_tpm="data/raw/tpm.tsv"
+        raw_tpm="data/{folder}/tpm.tsv"
     output:
-        Y="data/raw/Y.txt",
-        gene_names="data/raw/gene_names.txt",
-        sample_names="data/raw/sample_names.txt"
+        Y="data/{folder}/Y.txt",
+        gene_names="data/{folder}/gene_names.txt",
+        sample_names="data/{folder}/sample_names.txt"
     shell:
         "tail -n +2 {input.raw_tpm} | cut -f 2- > {output.Y} && "\
         "head -n 1 {input.raw_tpm} | sed 's/\\t/\\n/g' | tail -n +2 > {output.gene_names} && "\
@@ -175,7 +174,6 @@ rule extract_gene_names:
 
 rule all_datasets:
     input:
-        "data/raw/Y.txt",
-        "data/tensor/raw/Y.txt",
-        "data/deseq/raw/Y.txt",
-        "data/tensor/deseq/raw/Y.txt"
+        expand("data/{folder}/{file}",
+               folder=["raw", "tensor/raw", "deseq/raw", "tensor/deseq/raw"],
+               file=["Y.txt", "sample_info.txt", "gene_names.txt"])

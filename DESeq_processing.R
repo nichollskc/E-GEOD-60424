@@ -37,10 +37,6 @@ dds <- estimateSizeFactors(dds)
 vsd <- vst(dds, blind = FALSE)
 
 print(dim(assay(vsd)))
-write.table(t(assay(vsd)), snakemake@output[["normalised"]], sep="\t", col.names=FALSE, row.names=FALSE)
-
-fileConn <- file(snakemake@output[["gene_names"]])
-writeLines(rownames(vsd), fileConn)
-close(fileConn)
+write.table(t(assay(vsd)), snakemake@output[["normalised"]], sep="\t", col.names=TRUE, row.names=TRUE)
 
 write.table(coldata, file = snakemake@output[["sample_info"]], row.names = FALSE, col.names = TRUE, sep="\t")
