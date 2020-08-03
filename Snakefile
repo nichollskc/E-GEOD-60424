@@ -5,8 +5,14 @@ localrules: generate_count_matrix
 import json
 
 def all_abundance_files(wildcards):
+    return all_kallisto_output(wildcards, 'tsv')
+
+def all_h5_files(wildcards):
+    return all_kallisto_output(wildcards, 'h5')
+
+def all_kallisto_output(wildcards, extension):
     fastq_dict = get_fastq_dict()
-    return [f"data/kallisto/{SAMPLE_ID}/abundance.tsv"
+    return [f"data/kallisto/{SAMPLE_ID}/abundance.{extension}"
             for SAMPLE_ID in fastq_dict.keys()]
 
 def get_fastq_files_for_ID(wildcards):
@@ -29,23 +35,23 @@ def get_fastq_dict():
 
 rule construct_fastq_dict:
     input:
-        "fastq_info.txt"
+        "sample_info.txt"
     output:
         "fastq_dict.json"
     run:
         import json
         import pandas as pd
 
-        fastq_info = pd.read_csv(input[0], sep="\t")
+        sample_info = pd.read_csv(input[0], sep="\t")
         sample_col = 'Comment [ENA_SAMPLE]'
         url_col = 'Comment [FASTQ_URI]'
         id_col = 'FASTQ_ID'
-        fastq_info[id_col] = fastq_info[url_col].str.extract(r'ftp://.*/(\w+)\.fastq\.gz')
+        sample_info[id_col] = sample_info[url_col].str.extract(r'ftp://.*/(\w+)\.fastq\.gz')
 
         # Generate a dictionary with each key one of the samples,
         # and the value a dictionary from fastq_id to fastq_url for each
         # fastq file associated with the sample
-        grouped = fastq_info.groupby(sample_col)[id_col, url_col]
+        grouped = sample_info.groupby(sample_col)[id_col, url_col]
         fastq_dict = grouped.apply(lambda df : dict(zip(df[id_col], df[url_col]))).to_dict()
 
         with open(output[0], 'w') as f:
@@ -53,9 +59,9 @@ rule construct_fastq_dict:
 
 rule fetch_sample_info:
     output:
-        "fastq_info.txt"
+        "sample_info.txt"
     shell:
-        "wget -O {output} --no-verbose {config[fastq_info_url]}"
+        "wget -O {output} --no-verbose {config[sample_info_url]}"
 
 rule fetch_index:
     output:
@@ -106,7 +112,7 @@ rule generate_count_matrix:
         tx_to_gene="homo_sapiens/transcripts_to_genes.txt",
         abundance=all_abundance_files
     output:
-        df="data/tpm.tsv"
+        df="data/raw/tpm.tsv"
     run:
         import os
         import pandas as pd
@@ -130,3 +136,46 @@ rule generate_count_matrix:
         combined = pd.DataFrame(tpms, index=names)
         combined.to_csv(output.df, sep="\t", header=True, index=True)
 
+rule generate_deseq_normalised_matrix:
+    input:
+        "fastq_dict.json",
+        sample_info="sample_info.txt",
+        tx2gene="homo_sapiens/transcripts_to_genes.txt",
+        h5=all_h5_files
+    output:
+        normalised="data/deseq/raw/Y.txt",
+        sample_info="data/deseq/raw/sample_info.txt",
+        gene_names="data/deseq/raw/gene_names.txt"
+    script:
+        "DESeq_processing.R"
+
+rule construct_tensor_dataset:
+    input:
+        counts="data/{folder}/tpm.tsv",
+        sample_info="sample_info.txt"
+    output:
+        Y="data/tensor/{folder}/Y.txt",
+        N="data/tensor/{folder}/N.txt",
+        sample_info="data/tensor/{folder}/sample_info.txt",
+        gene_names="data/tensor/{folder}/gene_names.txt",
+    script:
+        "tensor_processing.R"
+
+rule extract_gene_names:
+    input:
+        raw_tpm="data/raw/tpm.tsv"
+    output:
+        Y="data/raw/Y.txt",
+        gene_names="data/raw/gene_names.txt",
+        sample_names="data/raw/sample_names.txt"
+    shell:
+        "tail -n +2 {input.raw_tpm} | cut -f 2- > {output.Y} && "\
+        "head -n 1 {input.raw_tpm} | sed 's/\\t/\\n/g' | tail -n +2 > {output.gene_names} && "\
+        "cut -f 1 {input.raw_tpm} | tail -n +2 > {output.sample_names}"
+
+rule all_datasets:
+    input:
+        "data/raw/Y.txt",
+        "data/tensor/raw/Y.txt",
+        "data/deseq/raw/Y.txt",
+        "data/tensor/deseq/raw/Y.txt"
