@@ -151,22 +151,32 @@ rule generate_deseq_normalised_matrix:
         tx2gene="homo_sapiens/transcripts_to_genes.txt",
         h5=all_h5_files
     output:
-        normalised="data/deseq/raw/tpm.tsv",
-        sample_info="data/deseq/raw/sample_info.txt"
+        vst_normalised="data/deseq/raw/tpm.tsv",
+        vst_sample_info="data/deseq/raw/sample_info.txt",
+        sf_normalised="data/deseq_sf/raw/tpm.tsv",
+        sf_sample_info="data/deseq_sf/raw/sample_info.txt",
     script:
         "DESeq_processing.R"
 
-rule construct_tensor_dataset:
+rule log_transform:
     input:
-        counts="data/{folder}/tpm.tsv",
-        sample_info="data/raw/sample_info.txt"
+        Y="data/{folder}raw/Y.txt",
+        gene_names="data/{folder}raw/gene_names.txt"
+    # Default is for a wildcard to be .+ so that it can't be empty
+    # Allow folder wildcard to be empty by using .* instead
+    wildcard_constraints:
+        folder=".*"
     output:
-        Y="data/tensor/{folder}/Y.txt",
-        N="data/tensor/{folder}/N.txt",
-        sample_info="data/tensor/{folder}/sample_info.txt",
-        gene_names="data/tensor/{folder}/gene_names.txt",
-    script:
-        "tensor_processing.R"
+        Y="data/{folder}log/Y.txt",
+        gene_names="data/{folder}log/gene_names.txt"
+    run:
+        import numpy as np
+        import shutil
+        shutil.copy(input.gene_names, output.gene_names)
+
+        Y = np.loadtxt(input.Y, ndmin=2)
+        Y_log = np.log(Y + 1)
+        np.savetxt(output.Y, Y_log, delimiter='\t')
 
 rule extract_gene_names:
     input:
@@ -183,5 +193,6 @@ rule extract_gene_names:
 rule all_datasets:
     input:
         expand("data/{folder}/{file}",
-               folder=["raw", "tensor/raw", "deseq/raw", "tensor/deseq/raw"],
-               file=["Y.txt", "sample_info.txt", "gene_names.txt"])
+               folder=["raw", "deseq/raw", "deseq_sf/raw",
+                       "log", "deseq/log", "deseq_sf/log"],
+               file=["Y.txt"])

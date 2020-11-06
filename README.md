@@ -14,7 +14,11 @@ First collect sample info and process it in a form that we can easily extract fa
 
 Then run the rest of the analysis. This step will cause an error if the `fastq_dict.json` file has not been created by the first snakemake command.
 
-`snakemake data/tpm.tsv --cluster "sbatch --time=30 --account=CWALLACE-SL3-CPU" --jobs 1000`
+`snakemake all_datasets --cluster "sbatch --time=30 --account=CWALLACE-SL3-CPU" --jobs 1000`
+
+If using in biclustering comparison, copy the files to the relevant directory:
+
+`BIC_COMP_DIR=~/rds/rds-cew54-wallace-ngs/kath_biclust_comp/biclustering_comparison/data/real/sortedblood/; RSYNC_OPTS="-avrn"  mkdir -p $BIC_COMP_DIR; rsync $RSYNC_OPTS data/raw $BIC_COMP_DIR; rsync $RSYNC_OPTS data/tensor $BIC_COMP_DIR; rsync $RSYNC_OPTS data/deseq $BIC_COMP_DIR`
 
 ## Installing conda environment - alternative instructions
 

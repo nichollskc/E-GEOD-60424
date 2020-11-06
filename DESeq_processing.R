@@ -32,11 +32,13 @@ keep <- rowSums(counts(dds)) > 1
 dds <- dds[keep,]
 print(nrow(dds))
 
-# Apply variance-stabilizing transformation
+# Apply variance-stabilizing transformation and size-factor adjustment
 dds <- estimateSizeFactors(dds)
 vsd <- vst(dds, blind = FALSE)
+sf_normalised <- counts(dds, normalized=TRUE)
 
-print(dim(assay(vsd)))
-write.table(t(assay(vsd)), snakemake@output[["normalised"]], sep="\t", col.names=TRUE, row.names=coldata[["names"]])
+write.table(t(assay(vsd)), snakemake@output[["vst_normalised"]], sep="\t", col.names=TRUE, row.names=coldata[["names"]])
+write.table(t(sf_normalised), snakemake@output[["sf_normalised"]], sep="\t", col.names=TRUE, row.names=coldata[["names"]])
 
-write.table(coldata, file = snakemake@output[["sample_info"]], row.names = FALSE, col.names = TRUE, sep="\t")
+write.table(coldata, file = snakemake@output[["vst_sample_info"]], row.names = FALSE, col.names = TRUE, sep="\t")
+write.table(coldata, file = snakemake@output[["sf_sample_info"]], row.names = FALSE, col.names = TRUE, sep="\t")
