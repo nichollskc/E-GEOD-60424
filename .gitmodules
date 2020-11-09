@@ -1,0 +1,3 @@
+[submodule "biclustering_comparison"]
+	path = biclustering_comparison
+	url = https://github.com/nichollskc/biclustering_comparison.git
