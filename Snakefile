@@ -208,6 +208,27 @@ rule restrict_to_expressed_protein:
 
         shutil.copy(input.gene_names, output.gene_names)
 
+rule tensor_dataset:
+    input:
+        sample_info="data/real/{folder}/sample_info.txt",
+        Y="data/real/{folder}/expressed/Y.txt",
+        gene_names="data/real/{folder}/expressed/gene_names.txt",
+    output:
+        Y="data/real/{folder}/expressed/tensor/Y.txt",
+        N="data/real/{folder}/expressed/tensor/N.txt",
+        sample_info="data/real/{folder}/expressed/tensor/sample_info.txt",
+        gene_names="data/real/{folder}/expressed/tensor/gene_names.txt",
+    run:
+        import tensor_processing as tp
+
+        tp.convert_to_tensor_dataset(input.Y,
+                                     output.Y,
+                                     input.sample_info,
+                                     output.sample_info,
+                                     output.N)
+
+        shutil.copy(input.gene_names, output.gene_names)
+
 rule all_datasets:
     input:
         expand("data/real/{folder}/expressed/{file}",
@@ -218,5 +239,10 @@ rule all_datasets:
 rule all_runs:
     input:
         expand("logs/{method_dataset_runid}.log",
+               method_dataset_runid=config['REAL_DATASET_METHOD_RUNIDS'])
+
+rule all_runs_force:
+    input:
+        expand("results/{method_dataset_runid}/X.txt",
                method_dataset_runid=config['REAL_DATASET_METHOD_RUNIDS'])
 
