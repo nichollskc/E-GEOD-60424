@@ -210,7 +210,7 @@ rule restrict_to_expressed_protein:
 
 rule tensor_dataset:
     input:
-        sample_info="data/real/{folder}/sample_info.txt",
+        sample_info="data/real/raw/sample_info.txt",
         Y="data/real/{folder}/expressed/Y.txt",
         gene_names="data/real/{folder}/expressed/gene_names.txt",
     output:
@@ -219,6 +219,7 @@ rule tensor_dataset:
         sample_info="data/real/{folder}/expressed/tensor/sample_info.txt",
         gene_names="data/real/{folder}/expressed/tensor/gene_names.txt",
     run:
+        import shutil
         import tensor_processing as tp
 
         tp.convert_to_tensor_dataset(input.Y,
@@ -231,9 +232,10 @@ rule tensor_dataset:
 
 rule all_datasets:
     input:
-        expand("data/real/{folder}/expressed/{file}",
+        expand("data/real/{folder}/expressed{tensor}/{file}",
                folder=["raw", "deseq/raw", "deseq_sf/raw",
                        "log", "deseq/log", "deseq_sf/log"],
+               tensor=["/tensor", ""],
                file=["Y.txt"])
 
 rule all_runs:
