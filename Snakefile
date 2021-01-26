@@ -230,13 +230,23 @@ rule tensor_dataset:
 
         shutil.copy(input.gene_names, output.gene_names)
 
+rule resave_with_np:
+    input:
+        Y="data/real/{folder}/Y.txt",
+    output:
+        Y="data/real/{folder}/Y_resaved.txt",
+    run:
+        import np
+        Y = np.loadtxt(input.Y, delimiter='\t')
+        np.savetxt(output.Y, Y, delimiter='\t')
+
 rule all_datasets:
     input:
         expand("data/real/{folder}/expressed{tensor}/{file}",
                folder=["raw", "deseq/raw", "deseq_sf/raw",
                        "log", "deseq/log", "deseq_sf/log"],
                tensor=["/tensor", ""],
-               file=["Y.txt"])
+               file=["Y.txt", "Y_resaved.txt"])
 
 rule all_runs:
     input:
