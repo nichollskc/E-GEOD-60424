@@ -69,7 +69,7 @@ rule process_sample_info:
     input:
         fastq_info="fastq_info.txt"
     output:
-        sample_info="data/real/raw/sample_info.txt"
+        sample_info="data/real/presnell/raw/sample_info.txt"
     script:
         "process_sample_info.R"
 
@@ -122,7 +122,7 @@ rule generate_count_matrix:
         tx_to_gene="homo_sapiens/transcripts_to_genes.txt",
         abundance=all_abundance_files
     output:
-        df="data/real/raw/tpm.tsv"
+        df="data/real/presnell/raw/tpm.tsv"
     run:
         import os
         import pandas as pd
@@ -149,24 +149,24 @@ rule generate_count_matrix:
 rule generate_deseq_normalised_matrix:
     input:
         "fastq_dict.json",
-        sample_info="data/real/raw/sample_info.txt",
+        sample_info="data/real/presnell/raw/sample_info.txt",
         tx2gene="homo_sapiens/transcripts_to_genes.txt",
         h5=all_h5_files
     output:
-        vst_normalised="data/real/deseq/raw/tpm.tsv",
-        vst_sample_info="data/real/deseq/raw/sample_info.txt",
-        sf_normalised="data/real/deseq_sf/raw/tpm.tsv",
-        sf_sample_info="data/real/deseq_sf/raw/sample_info.txt",
+        vst_normalised="data/real/presnell/deseq/raw/tpm.tsv",
+        vst_sample_info="data/real/presnell/deseq/raw/sample_info.txt",
+        sf_normalised="data/real/presnell/deseq_sf/raw/tpm.tsv",
+        sf_sample_info="data/real/presnell/deseq_sf/raw/sample_info.txt",
     script:
         "DESeq_processing.R"
 
 rule extract_gene_names:
     input:
-        raw_tpm="data/real/{folder}/tpm.tsv"
+        raw_tpm="data/real/presnell/{folder}/tpm.tsv"
     output:
-        Y="data/real/{folder}/Y.txt",
-        gene_names="data/real/{folder}/gene_names.txt",
-        sample_names="data/real/{folder}/sample_names.txt"
+        Y="data/real/presnell/{folder}/Y.txt",
+        gene_names="data/real/presnell/{folder}/gene_names.txt",
+        sample_names="data/real/presnell/{folder}/sample_names.txt"
     shell:
         "tail -n +2 {input.raw_tpm} | cut -f 2- > {output.Y} && "\
         "head -n 1 {input.raw_tpm} | sed 's/\\t/\\n/g' | tail -n +1 > {output.gene_names} && "\
@@ -174,10 +174,10 @@ rule extract_gene_names:
 
 rule find_expressed_protein_genes:
     input:
-        tpm="data/real/deseq_sf/raw/tpm.tsv",
-        sample_info="data/real/deseq_sf/raw/sample_info.txt",
+        tpm="data/real/presnell/deseq_sf/raw/tpm.tsv",
+        sample_info="data/real/presnell/deseq_sf/raw/sample_info.txt",
     output:
-        gene_names="data/real/deseq_sf/raw/expressed_protein_gene_names.txt"
+        gene_names="data/real/presnell/deseq_sf/raw/expressed_protein_gene_names.txt"
     run:
         import select_genes as sg
         gene_names = sg.restrict_to_expressed_protein(input.tpm, input.sample_info)
@@ -186,12 +186,12 @@ rule find_expressed_protein_genes:
 
 rule restrict_to_expressed_protein:
     input:
-        Y="data/real/{folder}/Y.txt",
-        gene_names="data/real/{folder}/gene_names.txt",
-        expressed_protein_genes="data/real/deseq_sf/raw/expressed_protein_gene_names.txt"
+        Y="data/real/presnell/{folder}/Y.txt",
+        gene_names="data/real/presnell/{folder}/gene_names.txt",
+        expressed_protein_genes="data/real/presnell/deseq_sf/raw/expressed_protein_gene_names.txt"
     output:
-        Y="data/real/{folder}/expressed/Y.txt",
-        gene_names="data/real/{folder}/expressed/gene_names.txt",
+        Y="data/real/presnell/{folder}/expressed/Y.txt",
+        gene_names="data/real/presnell/{folder}/expressed/gene_names.txt",
     run:
         import shutil
         import biclust_comp.utils as utils
@@ -210,14 +210,14 @@ rule restrict_to_expressed_protein:
 
 rule tensor_dataset:
     input:
-        sample_info="data/real/raw/sample_info.txt",
-        Y="data/real/{folder}/expressed/Y.txt",
-        gene_names="data/real/{folder}/expressed/gene_names.txt",
+        sample_info="data/real/presnell/raw/sample_info.txt",
+        Y="data/real/presnell/{folder}/expressed/Y.txt",
+        gene_names="data/real/presnell/{folder}/expressed/gene_names.txt",
     output:
-        Y="data/real/{folder}/expressed/tensor/Y.txt",
-        N="data/real/{folder}/expressed/tensor/N.txt",
-        sample_info="data/real/{folder}/expressed/tensor/sample_info.txt",
-        gene_names="data/real/{folder}/expressed/tensor/gene_names.txt",
+        Y="data/real/presnell/{folder}/expressed/tensor/Y.txt",
+        N="data/real/presnell/{folder}/expressed/tensor/N.txt",
+        sample_info="data/real/presnell/{folder}/expressed/tensor/sample_info.txt",
+        gene_names="data/real/presnell/{folder}/expressed/tensor/gene_names.txt",
     run:
         import shutil
         import tensor_processing as tp
@@ -232,17 +232,17 @@ rule tensor_dataset:
 
 rule resave_with_np:
     input:
-        Y="data/real/{folder}/Y.txt",
+        Y="data/real/presnell/{folder}/Y.txt",
     output:
-        Y="data/real/{folder}/Y_resaved.txt",
+        Y="data/real/presnell/{folder}/Y_resaved.txt",
     run:
-        import np
+        import numpy as np
         Y = np.loadtxt(input.Y, delimiter='\t')
         np.savetxt(output.Y, Y, delimiter='\t')
 
 rule all_datasets:
     input:
-        expand("data/real/{folder}/expressed{tensor}/{file}",
+        expand("data/real/presnell/{folder}/expressed{tensor}/{file}",
                folder=["raw", "deseq/raw", "deseq_sf/raw",
                        "log", "deseq/log", "deseq_sf/log"],
                tensor=["/tensor", ""],
