@@ -251,10 +251,10 @@ rule all_datasets:
 rule all_runs:
     input:
         expand("logs/{method_dataset_runid}.log",
-               method_dataset_runid=config['REAL_DATASET_METHOD_RUNIDS'])
+               method_dataset_runid=config['PRESNELL_DATASET_METHOD_RUNIDS'])
 
 rule all_runs_force:
     input:
         expand("results/{method_dataset_runid}/X.txt",
-               method_dataset_runid=config['REAL_DATASET_METHOD_RUNIDS'])
+               method_dataset_runid=config['PRESNELL_DATASET_METHOD_RUNIDS'])
 
