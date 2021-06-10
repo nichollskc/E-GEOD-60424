@@ -230,6 +230,27 @@ rule tensor_dataset:
 
         shutil.copy(input.gene_names, output.gene_names)
 
+rule center_dataset:
+    input:
+        Y="data/real/presnell/{folder}/expressed/tensor/Y.txt",
+        N="data/real/presnell/{folder}/expressed/tensor/N.txt",
+        sample_info="data/real/presnell/{folder}/expressed/tensor/sample_info.txt",
+        gene_names="data/real/presnell/{folder}/expressed/tensor/gene_names.txt",
+    output:
+        Y="data/real/presnell/{folder}/expressed/tensor/centered/Y.txt",
+        N="data/real/presnell/{folder}/expressed/tensor/centered/N.txt",
+        sample_info="data/real/presnell/{folder}/expressed/tensor/centered/sample_info.txt",
+        gene_names="data/real/presnell/{folder}/expressed/tensor/centered/gene_names.txt",
+    run:
+        import shutil
+        import centering
+
+        centering.center_Y(input.Y, output.Y)
+
+        shutil.copy(input.gene_names, output.gene_names)
+        shutil.copy(input.sample_info, output.sample_info)
+        shutil.copy(input.N, output.N)
+
 rule resave_with_np:
     input:
         Y="data/real/presnell/{folder}/Y.txt",
@@ -257,4 +278,3 @@ rule all_runs_force:
     input:
         expand("results/{method_dataset_runid}/X.txt",
                method_dataset_runid=config['PRESNELL_DATASET_METHOD_RUNIDS'])
-
